@@ -11,9 +11,9 @@ public sealed class FormDanhSachDichVu : EntityGridForm<FormDanhSachDichVu.Servi
     [
         new("MaDv", "Mã dịch vụ", MaxLength: 5),
         new("TenDv", "Tên dịch vụ", MaxLength: 20),
+        new("LoaiDv", "Loại dịch vụ", EditFieldType.Choice, Choices: ["Thức uống", "Đồ ăn", "Dịch vụ"]),
         new("DonGia", "Đơn giá", EditFieldType.Decimal),
-        new("SlconLai", "Số lượng còn lại (-1: không giới hạn)", EditFieldType.Integer),
-        new("LoaiDv", "Loại dịch vụ", MaxLength: 20)
+        new("SlconLai", "Số lượng còn lại", EditFieldType.Integer, Required: false)
     ];
 
     public FormDanhSachDichVu() : base(
@@ -29,7 +29,10 @@ public sealed class FormDanhSachDichVu : EntityGridForm<FormDanhSachDichVu.Servi
         LoadRows,
         row => row.MaDv,
         EditService,
-        DeleteService)
+        DeleteService,
+        Properties.Resources.DichVu,
+        Properties.Resources.edit,
+        Properties.Resources.delete)
     {
     }
 
@@ -56,7 +59,8 @@ public sealed class FormDanhSachDichVu : EntityGridForm<FormDanhSachDichVu.Servi
         var values = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["SlconLai"] = "-1",
-            ["DonGia"] = "0"
+            ["DonGia"] = "0",
+            ["LoaiDv"] = "Thức uống"
         };
         if (code is not null)
         {
@@ -69,14 +73,26 @@ public sealed class FormDanhSachDichVu : EntityGridForm<FormDanhSachDichVu.Servi
             }
             values["MaDv"] = item.MaDv;
             values["TenDv"] = item.TenDv;
+            values["LoaiDv"] = item.LoaiDv;
             values["DonGia"] = item.DonGia.ToString(CultureInfo.CurrentCulture);
             values["SlconLai"] = item.SlconLai?.ToString() ?? "-1";
-            values["LoaiDv"] = item.LoaiDv;
         }
 
-        var fields = EditFields.Select(field => field with { ReadOnly = code is not null && field.Name == "MaDv" }).ToArray();
-        using var dialog = new EntityEditDialog(code is null ? "Thêm dịch vụ" : "Cập nhật dịch vụ", fields, values,
-            input => SaveService(code, input));
+        var fields = EditFields.Select(field => field with
+        {
+            ReadOnly = field.Name == "MaDv",
+            Choices = field.Name == "LoaiDv" && values.TryGetValue("LoaiDv", out var currentType)
+                ? new[] { "Thức uống", "Đồ ăn", "Dịch vụ", currentType }.Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
+                : field.Choices
+        }).ToArray();
+        using var dialog = new EntityEditDialog(
+            code is null ? "FormThemDichVu" : "FormSuaDichVu",
+            code is null ? "Thêm thông tin dịch vụ" : "Cập nhật thông tin dịch vụ",
+            fields,
+            values,
+            input => SaveService(code, input),
+            code is null ? new Size(602, 561) : new Size(540, 522),
+            saveCaption: code is null ? "Thêm mới" : "Cập nhật");
         return dialog.ShowDialog() == DialogResult.OK;
     }
 
@@ -87,8 +103,11 @@ public sealed class FormDanhSachDichVu : EntityGridForm<FormDanhSachDichVu.Servi
         var type = input["LoaiDv"].Trim();
         if (!TryDecimal(input["DonGia"], out var price) || price <= 0)
             return Warn("Đơn giá phải là số lớn hơn 0.");
-        if (!int.TryParse(input["SlconLai"], out var quantity) || quantity < -1)
-            return Warn("Số lượng phải là số nguyên không âm hoặc -1 nếu không giới hạn.");
+        var quantityText = input["SlconLai"].Trim();
+        if (quantityText.Length == 0)
+            quantityText = "-1";
+        if (!int.TryParse(quantityText, out var quantity) || quantity < -1)
+            return Warn("Số lượng còn lại không hợp lệ.");
 
         using var db = new HotelManagementContext();
         var item = originalCode is null

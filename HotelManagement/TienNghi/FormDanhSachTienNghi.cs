@@ -19,7 +19,10 @@ public sealed class FormDanhSachTienNghi : EntityGridForm<FormDanhSachTienNghi.A
         LoadRows,
         row => row.MaTn,
         EditAmenity,
-        DeleteAmenity)
+        DeleteAmenity,
+        ResourceImages.FromBytes(Properties.Resources.TienNghi),
+        Properties.Resources.edit,
+        Properties.Resources.delete)
     {
     }
 
@@ -51,8 +54,14 @@ public sealed class FormDanhSachTienNghi : EntityGridForm<FormDanhSachTienNghi.A
         }
 
         var fields = EditFields.Select(field => field with { ReadOnly = code is not null && field.Name == "MaTn" }).ToArray();
-        using var dialog = new EntityEditDialog(code is null ? "Thêm tiện nghi" : "Cập nhật tiện nghi", fields, values,
-            input => SaveAmenity(code, input));
+        using var dialog = new EntityEditDialog(
+            code is null ? "FormThemTienNghi" : "FormSuaTienNghi",
+            code is null ? "Thêm tiện nghi" : "Cập nhật tiện nghi",
+            fields,
+            values,
+            input => SaveAmenity(code, input),
+            new Size(520, 380),
+            saveCaption: code is null ? "Thêm mới" : "Cập nhật");
         return dialog.ShowDialog() == DialogResult.OK;
     }
 

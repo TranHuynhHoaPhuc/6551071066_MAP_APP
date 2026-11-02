@@ -10,8 +10,8 @@ public sealed class FormDanhSachKhachHang : EntityGridForm<FormDanhSachKhachHang
     [
         new("MaKh", "Mã khách hàng", MaxLength: 5),
         new("TenKh", "Họ và tên", MaxLength: 50),
-        new("Sdt", "Số điện thoại", EditFieldType.Text, 10, Required: false),
         new("CccdPassport", "CCCD / Passport", MaxLength: 12),
+        new("Sdt", "Số điện thoại", EditFieldType.Text, 10),
         new("QuocTich", "Quốc tịch", MaxLength: 30),
         new("GioiTinh", "Giới tính", EditFieldType.Choice, Choices: ["Nam", "Nữ"])
     ];
@@ -30,7 +30,10 @@ public sealed class FormDanhSachKhachHang : EntityGridForm<FormDanhSachKhachHang
         LoadRows,
         row => row.MaKh,
         EditCustomer,
-        DeleteCustomer)
+        DeleteCustomer,
+        Properties.Resources.KhachHang,
+        Properties.Resources.edit,
+        Properties.Resources.delete)
     {
     }
 
@@ -56,6 +59,8 @@ public sealed class FormDanhSachKhachHang : EntityGridForm<FormDanhSachKhachHang
     private static bool EditCustomer(string? code)
     {
         var values = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (code is null)
+            values["MaKh"] = NextCustomerCode();
         if (code is not null)
         {
             using var db = new HotelManagementContext();
@@ -67,14 +72,20 @@ public sealed class FormDanhSachKhachHang : EntityGridForm<FormDanhSachKhachHang
             }
             values["MaKh"] = item.MaKh;
             values["TenKh"] = item.TenKh;
-            values["Sdt"] = item.Sdt ?? "";
             values["CccdPassport"] = item.CccdPassport;
+            values["Sdt"] = item.Sdt ?? "";
             values["QuocTich"] = item.QuocTich;
             values["GioiTinh"] = item.GioiTinh;
         }
-        var fields = EditFields.Select(field => field with { ReadOnly = code is not null && field.Name == "MaKh" }).ToArray();
-        using var dialog = new EntityEditDialog(code is null ? "Thêm khách hàng" : "Cập nhật khách hàng", fields, values,
-            input => SaveCustomer(code, input));
+        var fields = EditFields.Select(field => field with { ReadOnly = field.Name == "MaKh" }).ToArray();
+        using var dialog = new EntityEditDialog(
+            code is null ? "FormThemKhachHang" : "FormSuaKhachHang",
+            code is null ? "Thêm thông tin khách hàng" : "Cập nhật thông tin khách hàng",
+            fields,
+            values,
+            input => SaveCustomer(code, input),
+            code is null ? new Size(608, 645) : new Size(628, 620),
+            saveCaption: code is null ? "Thêm mới" : "Cập nhật");
         return dialog.ShowDialog() == DialogResult.OK;
     }
 
@@ -93,7 +104,12 @@ public sealed class FormDanhSachKhachHang : EntityGridForm<FormDanhSachKhachHang
             ? db.KhachHangs.FirstOrDefault(customer => customer.MaKh == code)
             : db.KhachHangs.FirstOrDefault(customer => customer.MaKh == originalCode && customer.DaXoa != true);
         if (originalCode is null && item is not null)
-            return Warn("Mã khách hàng đã tồn tại. Vui lòng nhập mã khác.");
+        {
+            code = NextCustomerCode();
+            item = db.KhachHangs.FirstOrDefault(customer => customer.MaKh == code);
+            if (item is not null)
+                return Warn("Không tạo được mã khách hàng mới. Vui lòng thử lại.");
+        }
         if (originalCode is not null && item is null)
             return Warn("Không tìm thấy khách hàng cần cập nhật.");
         if (item is null)
@@ -124,6 +140,17 @@ public sealed class FormDanhSachKhachHang : EntityGridForm<FormDanhSachKhachHang
     {
         MessageBox.Show(message, "Thông tin chưa hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         return false;
+    }
+
+    private static string NextCustomerCode()
+    {
+        using var db = new HotelManagementContext();
+        var max = db.KhachHangs.AsNoTracking().Select(item => item.MaKh).AsEnumerable()
+            .Where(code => code.StartsWith("KH", StringComparison.OrdinalIgnoreCase))
+            .Select(code => int.TryParse(code[2..], out var number) ? number : 0)
+            .DefaultIfEmpty(0)
+            .Max();
+        return "KH" + (max + 1).ToString("D3", System.Globalization.CultureInfo.InvariantCulture);
     }
 
     public sealed class CustomerRow

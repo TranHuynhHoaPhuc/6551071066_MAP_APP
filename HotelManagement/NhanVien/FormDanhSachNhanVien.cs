@@ -9,16 +9,16 @@ public sealed class FormDanhSachNhanVien : EntityGridForm<FormDanhSachNhanVien.E
 {
     private static readonly EditField[] EditFields =
     [
-        new("MaNv", "Mã nhân viên", MaxLength: 5),
         new("TenNv", "Họ và tên", MaxLength: 50),
-        new("ChucVu", "Chức vụ", MaxLength: 50),
+        new("ChucVu", "Chức vụ", EditFieldType.Choice, Choices: ["Người quản trị hệ thống", "Quản lý khách sạn", "Nhân viên"]),
         new("Luong", "Lương", EditFieldType.Decimal),
         new("Sdt", "Số điện thoại", EditFieldType.Text, 10),
-        new("Cccd", "CCCD", MaxLength: 12),
-        new("NgaySinh", "Ngày sinh", EditFieldType.Date),
         new("GioiTinh", "Giới tính", EditFieldType.Choice, Choices: ["Nam", "Nữ"]),
+        new("NgaySinh", "Ngày sinh", EditFieldType.Date),
+        new("Cccd", "CCCD", MaxLength: 12),
         new("DiaChi", "Địa chỉ", MaxLength: 100),
-        new("Email", "Email", EditFieldType.Text, 100, Required: false)
+        new("Email", "Email", EditFieldType.Text, 100, Required: false),
+        new("MaNv", "Mã nhân viên", MaxLength: 5)
     ];
 
     public FormDanhSachNhanVien() : base(
@@ -37,7 +37,10 @@ public sealed class FormDanhSachNhanVien : EntityGridForm<FormDanhSachNhanVien.E
         LoadRows,
         row => row.MaNv,
         EditEmployee,
-        DeleteEmployee)
+        DeleteEmployee,
+        Properties.Resources.NhanVien,
+        Properties.Resources.edit,
+        Properties.Resources.delete)
     {
     }
 
@@ -67,8 +70,9 @@ public sealed class FormDanhSachNhanVien : EntityGridForm<FormDanhSachNhanVien.E
     {
         var values = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["NgaySinh"] = "2000-01-01",
-            ["Luong"] = "0"
+            ["NgaySinh"] = DateTime.Today.AddYears(-18).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            ["Luong"] = "0",
+            ["GioiTinh"] = "Nam"
         };
         if (code is not null)
         {
@@ -90,9 +94,22 @@ public sealed class FormDanhSachNhanVien : EntityGridForm<FormDanhSachNhanVien.E
             values["DiaChi"] = item.DiaChi;
             values["Email"] = item.Email ?? "";
         }
-        var fields = EditFields.Select(field => field with { ReadOnly = code is not null && field.Name == "MaNv" }).ToArray();
-        using var dialog = new EntityEditDialog(code is null ? "Thêm nhân viên" : "Cập nhật nhân viên", fields, values,
-            input => SaveEmployee(code, input));
+        var fields = EditFields.Select(field => field with
+        {
+            ReadOnly = code is not null && field.Name == "MaNv",
+            Choices = field.Name == "ChucVu" && values.TryGetValue("ChucVu", out var currentRole)
+                ? new[] { "Người quản trị hệ thống", "Quản lý khách sạn", "Nhân viên", currentRole }.Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
+                : field.Choices
+        }).ToArray();
+        using var dialog = new EntityEditDialog(
+            code is null ? "FormThemNhanVien" : "FormSuaNhanVien",
+            code is null ? "Thêm thông tin nhân viên" : "Cập nhật thông tin nhân viên",
+            fields,
+            values,
+            input => SaveEmployee(code, input),
+            code is null ? new Size(1076, 558) : new Size(1053, 559),
+            twoColumns: true,
+            saveCaption: code is null ? "Thêm mới" : "Cập nhật");
         return dialog.ShowDialog() == DialogResult.OK;
     }
 

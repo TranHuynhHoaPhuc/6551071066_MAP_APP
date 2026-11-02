@@ -30,6 +30,9 @@ public abstract class EntityGridForm<TRow> : Form where TRow : class
     private readonly Func<TRow, string> _key;
     private readonly Func<string?, bool> _edit;
     private readonly Action<string> _delete;
+    private readonly Image _rowIcon;
+    private readonly Image _editIcon;
+    private readonly Image _deleteIcon;
     private readonly string _addCaption;
     private readonly string _editCaption;
     private readonly string _deleteCaption;
@@ -44,6 +47,9 @@ public abstract class EntityGridForm<TRow> : Form where TRow : class
         Func<TRow, string> key,
         Func<string?, bool> edit,
         Action<string> delete,
+        Image rowIcon,
+        Image editIcon,
+        Image deleteIcon,
         string addCaption = "Thêm mới",
         string editCaption = "Cập nhật",
         string deleteCaption = "Xóa")
@@ -55,6 +61,9 @@ public abstract class EntityGridForm<TRow> : Form where TRow : class
         _key = key;
         _edit = edit;
         _delete = delete;
+        _rowIcon = rowIcon;
+        _editIcon = editIcon;
+        _deleteIcon = deleteIcon;
         _addCaption = addCaption;
         _editCaption = editCaption;
         _deleteCaption = deleteCaption;
@@ -83,36 +92,36 @@ public abstract class EntityGridForm<TRow> : Form where TRow : class
         var toolbar = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 4,
+            ColumnCount = 5,
             RowCount = 1,
-            Padding = new Padding(10, 9, 10, 8),
+            Padding = new Padding(8, 7, 8, 7),
             Margin = Padding.Empty
         };
-        toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 34));
+        toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 42));
+        toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 190));
         toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 146));
-        toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 132));
+        toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 167));
+        toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 167));
 
         var searchIcon = new PictureBox
         {
             Image = ResourceImages.FromBytes(Properties.Resources.search),
             Dock = DockStyle.Fill,
             SizeMode = PictureBoxSizeMode.Zoom,
-            BorderStyle = BorderStyle.Fixed3D,
-            Margin = new Padding(0, 2, 5, 3),
+            Margin = new Padding(3, 0, 5, 0),
             TabStop = false
         };
-        _search.Font = new Font("Microsoft Sans Serif", 10F);
-        _search.Margin = new Padding(2, 2, 10, 3);
+        _search.Font = new Font("Microsoft Sans Serif", 13F);
+        _search.Margin = new Padding(2, 2, 8, 3);
         toolbar.Controls.Add(searchIcon, 0, 0);
         toolbar.Controls.Add(_search, 1, 0);
 
         var export = ToolbarButton("Xuất file Excel", Color.DarkTurquoise);
         export.Click += (_, _) => ExportToExcel();
-        toolbar.Controls.Add(export, 2, 0);
+        toolbar.Controls.Add(export, 3, 0);
         var add = ToolbarButton(_addCaption, Color.LightPink);
         add.Click += (_, _) => OpenEditor(null);
-        toolbar.Controls.Add(add, 3, 0);
+        toolbar.Controls.Add(add, 4, 0);
         root.Controls.Add(toolbar, 0, 0);
 
         ConfigureGrid();
@@ -124,8 +133,8 @@ public abstract class EntityGridForm<TRow> : Form where TRow : class
         Text = text,
         Dock = DockStyle.Fill,
         BackColor = color,
-        Font = new Font("Microsoft Sans Serif", 10F, FontStyle.Bold),
-        Margin = new Padding(4, 0, 4, 0),
+        Font = new Font("Microsoft Sans Serif", 12F, FontStyle.Bold),
+        Margin = new Padding(3, 0, 3, 0),
         UseVisualStyleBackColor = false
     };
 
@@ -145,8 +154,9 @@ public abstract class EntityGridForm<TRow> : Form where TRow : class
         _grid.MultiSelect = false;
         _grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         _grid.DefaultCellStyle.Font = new Font("Microsoft Sans Serif", 9F);
-        _grid.RowTemplate.Height = 36;
+        _grid.RowTemplate.Height = 40;
         _grid.AutoGenerateColumns = false;
+        _grid.Columns.Add(ImageColumn("colIcon", "", _rowIcon, 50));
 
         foreach (var field in _fields)
         {
@@ -160,21 +170,31 @@ public abstract class EntityGridForm<TRow> : Form where TRow : class
                 DefaultCellStyle = { Format = field.Format ?? string.Empty }
             });
         }
-        _grid.Columns.Add(ActionColumn("colSua", _editCaption));
-        _grid.Columns.Add(ActionColumn("colXoa", _deleteCaption));
+        _grid.Columns.Add(ImageColumn("colSua", _editCaption, _editIcon, 50));
+        _grid.Columns.Add(ImageColumn("colXoa", _deleteCaption, _deleteIcon, 50));
         _grid.CellClick += Grid_CellClick;
+        _grid.CellFormatting += (_, e) =>
+        {
+            if (e.RowIndex < 0)
+                return;
+            var name = _grid.Columns[e.ColumnIndex].Name;
+            if (name == "colIcon") e.Value = _rowIcon;
+            else if (name == "colSua") e.Value = _editIcon;
+            else if (name == "colXoa") e.Value = _deleteIcon;
+            else return;
+            e.FormattingApplied = true;
+        };
     }
 
-    private static DataGridViewButtonColumn ActionColumn(string name, string caption) => new()
+    private static DataGridViewImageColumn ImageColumn(string name, string caption, Image image, int width) => new()
     {
         Name = name,
         HeaderText = caption,
-        Text = caption,
-        UseColumnTextForButtonValue = true,
+        Image = image,
+        ImageLayout = DataGridViewImageCellLayout.Zoom,
         AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
-        Width = 88,
-        MinimumWidth = 76,
-        FlatStyle = FlatStyle.Standard,
+        Width = width,
+        MinimumWidth = width,
         ReadOnly = true,
         SortMode = DataGridViewColumnSortMode.NotSortable
     };
@@ -294,18 +314,30 @@ public sealed class EntityEditDialog : Form
     private readonly IReadOnlyList<EditField> _fields;
     private readonly IReadOnlyDictionary<string, string> _initialValues;
     private readonly Func<IReadOnlyDictionary<string, string>, bool> _save;
+    private readonly string _heading;
+    private readonly string _saveCaption;
+    private readonly Size _clientSize;
+    private readonly bool _twoColumns;
     private readonly Dictionary<string, Control> _inputs = new(StringComparer.Ordinal);
 
     public EntityEditDialog(
         string title,
+        string heading,
         IReadOnlyList<EditField> fields,
         IReadOnlyDictionary<string, string> initialValues,
-        Func<IReadOnlyDictionary<string, string>, bool> save)
+        Func<IReadOnlyDictionary<string, string>, bool> save,
+        Size clientSize,
+        bool twoColumns = false,
+        string saveCaption = "Thêm mới")
     {
         Text = title;
+        _heading = heading;
         _fields = fields;
         _initialValues = initialValues;
         _save = save;
+        _clientSize = clientSize;
+        _twoColumns = twoColumns;
+        _saveCaption = saveCaption;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = false;
@@ -318,29 +350,49 @@ public sealed class EntityEditDialog : Form
 
     private void BuildLayout()
     {
-        var bodyHeight = Math.Min(390, Math.Max(150, _fields.Count * 45 + 12));
-        ClientSize = new Size(560, bodyHeight + 82);
+        ClientSize = _clientSize;
+        var heading = new Label
+        {
+            Text = _heading,
+            Location = new Point(12, 22),
+            Size = new Size(ClientSize.Width - 24, 34),
+            TextAlign = ContentAlignment.MiddleCenter,
+            Font = new Font("Microsoft Sans Serif", 15F, FontStyle.Bold),
+            ForeColor = Color.Red
+        };
+        Controls.Add(heading);
+
         var body = new Panel
         {
-            Location = new Point(14, 12),
-            Size = new Size(532, bodyHeight),
-            AutoScroll = true
+            Location = new Point(24, 76),
+            Size = new Size(ClientSize.Width - 48, ClientSize.Height - 156),
+            BorderStyle = BorderStyle.FixedSingle
         };
         Controls.Add(body);
 
-        var y = 8;
-        foreach (var field in _fields)
+        var columnCount = _twoColumns ? 2 : 1;
+        var rowsPerColumn = (int)Math.Ceiling(_fields.Count / (double)columnCount);
+        var rowHeight = Math.Max(42, (body.ClientSize.Height - 12) / Math.Max(1, rowsPerColumn));
+        for (var index = 0; index < _fields.Count; index++)
         {
+            var field = _fields[index];
+            var column = _twoColumns && index >= rowsPerColumn ? 1 : 0;
+            var row = _twoColumns ? index % rowsPerColumn : index;
+            var columnWidth = body.ClientSize.Width / columnCount;
+            var labelWidth = _twoColumns ? Math.Min(140, columnWidth / 3) : Math.Min(200, (int)(columnWidth * 0.36));
+            var xOffset = column * columnWidth;
+            var y = 5 + row * rowHeight;
             var label = new Label
             {
                 Text = field.Caption,
-                Location = new Point(4, y + 4),
-                Size = new Size(174, 27),
-                TextAlign = ContentAlignment.MiddleRight
+                Location = new Point(xOffset + 8, y + (rowHeight - 28) / 2),
+                Size = new Size(labelWidth, 28),
+                TextAlign = ContentAlignment.MiddleRight,
+                Font = new Font("Microsoft Sans Serif", 11F)
             };
             var input = CreateInput(field);
-            input.Location = new Point(190, y);
-            input.Size = new Size(315, 29);
+            input.Location = new Point(xOffset + labelWidth + 14, y + (rowHeight - 31) / 2);
+            input.Size = new Size(Math.Max(120, columnWidth - labelWidth - 32), 31);
             if (input is TextBox textBox)
             {
                 textBox.MaxLength = field.MaxLength;
@@ -353,15 +405,14 @@ public sealed class EntityEditDialog : Form
             _inputs[field.Name] = input;
             body.Controls.Add(label);
             body.Controls.Add(input);
-            y += 45;
         }
 
         var save = new Button
         {
-            Text = "Lưu",
+            Text = _saveCaption,
             BackColor = Color.Moccasin,
-            Size = new Size(120, 36),
-            Location = new Point(160, body.Bottom + 17),
+            Size = new Size(135, 42),
+            Location = new Point(ClientSize.Width / 2 - 150, ClientSize.Height - 64),
             UseVisualStyleBackColor = false
         };
         save.Click += Save_Click;
@@ -371,8 +422,8 @@ public sealed class EntityEditDialog : Form
         {
             Text = "Thoát",
             BackColor = SystemColors.GradientActiveCaption,
-            Size = new Size(120, 36),
-            Location = new Point(294, body.Bottom + 17),
+            Size = new Size(135, 42),
+            Location = new Point(ClientSize.Width / 2 + 15, ClientSize.Height - 64),
             UseVisualStyleBackColor = false,
             DialogResult = DialogResult.Cancel
         };
