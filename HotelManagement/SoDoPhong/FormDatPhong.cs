@@ -745,9 +745,11 @@ public sealed class FormDatPhong : Form
                     TheoGio = false
                 });
                 room.Ttph = "Đã đặt";
+                // Trigger CapNhatGiaCTDP in Database.sql reads inserted into scalar variables.
+                // Persist each detail separately so its inserted pseudo-table contains one row.
+                db.SaveChanges();
             }
 
-            db.SaveChanges();
             transaction.Commit();
             return true;
         }
