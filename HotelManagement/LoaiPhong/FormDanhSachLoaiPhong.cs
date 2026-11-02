@@ -1,4 +1,5 @@
 using ClosedXML.Excel;
+using HotelManagement.ChiTietTienNghi;
 using HotelManagement.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -200,8 +201,8 @@ public sealed class FormDanhSachLoaiPhong : Form
                 }
                 break;
             case "colTienNghi":
-                MessageBox.Show($"Chi tiết tiện nghi của loại phòng {roomType.TenLph} ({roomType.MaLph}) thuộc mục thực hành tiếp theo.",
-                    "Thông tin", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                using (var dialog = new FormDanhSachChiTietTienNghi(roomType.MaLph, roomType.TenLph))
+                    dialog.ShowDialog(FindForm());
                 break;
         }
     }

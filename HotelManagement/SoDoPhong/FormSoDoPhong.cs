@@ -396,12 +396,9 @@ public sealed class FormSoDoPhong : Form
     private void BtnDatPhong_Click(object? sender, EventArgs e)
     {
         var maPhong = MaPhongDangChon();
-        MessageBox.Show(
-            "Chức năng đặt phòng đang được xây dựng." +
-            (maPhong is not null ? Environment.NewLine + "Phòng đang chọn: " + maPhong : ""),
-            "Thông báo",
-            MessageBoxButtons.OK,
-            MessageBoxIcon.Information);
+        using var dialog = new FormDatPhong(maPhong);
+        if (dialog.ShowDialog(FindForm()) == DialogResult.OK)
+            TaiLaiDanhSach();
     }
 
     private sealed class RoomMapRow

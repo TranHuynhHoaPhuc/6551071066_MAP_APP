@@ -3,10 +3,14 @@ using System;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
+using HotelManagement.DichVu;
 using HotelManagement.DangNhap;
+using HotelManagement.KhachHang;
 using HotelManagement.LoaiPhong;
+using HotelManagement.NhanVien;
 using HotelManagement.Phong;
 using HotelManagement.SoDoPhong;
+using HotelManagement.TienNghi;
 
 namespace HotelManagement
 {
@@ -148,12 +152,12 @@ namespace HotelManagement
 
         private void button7_Click(object? sender, EventArgs e)
         {
-            HienThiDangPhatTrien("Danh sách nhân viên");
+            LoadFormCon(new FormDanhSachNhanVien());
         }
 
         private void button6_Click(object? sender, EventArgs e)
         {
-            HienThiDangPhatTrien("Danh sách khách hàng");
+            LoadFormCon(new FormDanhSachKhachHang());
         }
 
         private void btnQuanLyPhong_Click(object? sender, EventArgs e)
@@ -163,12 +167,12 @@ namespace HotelManagement
 
         private void button12_Click(object? sender, EventArgs e)
         {
-            HienThiDangPhatTrien("Danh sách tiện nghi");
+            LoadFormCon(new FormDanhSachTienNghi());
         }
 
         private void button11_Click(object? sender, EventArgs e)
         {
-            HienThiDangPhatTrien("Danh sách dịch vụ");
+            LoadFormCon(new FormDanhSachDichVu());
         }
 
         private void btnSoDoPhong_Click(object? sender, EventArgs e)
@@ -178,7 +182,7 @@ namespace HotelManagement
 
         private void button9_Click(object? sender, EventArgs e)
         {
-            HienThiDangPhatTrien("Danh sách đặt phòng");
+            LoadFormCon(new FormDanhSachDatPhong());
         }
 
         private void button10_Click(object? sender, EventArgs e)
