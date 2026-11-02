@@ -80,7 +80,7 @@ public sealed class FormDanhSachDichVu : EntityGridForm<FormDanhSachDichVu.Servi
 
         var fields = EditFields.Select(field => field with
         {
-            ReadOnly = field.Name == "MaDv",
+            ReadOnly = code is not null && field.Name == "MaDv",
             Choices = field.Name == "LoaiDv" && values.TryGetValue("LoaiDv", out var currentType)
                 ? new[] { "Thức uống", "Đồ ăn", "Dịch vụ", currentType }.Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
                 : field.Choices
