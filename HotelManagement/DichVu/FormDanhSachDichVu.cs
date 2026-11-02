@@ -43,15 +43,24 @@ public sealed class FormDanhSachDichVu : EntityGridForm<FormDanhSachDichVu.Servi
         if (keyword.Length > 0)
             query = query.Where(item => item.MaDv.Contains(keyword) || item.TenDv.Contains(keyword) || item.LoaiDv.Contains(keyword));
 
-        return query.OrderBy(item => item.MaDv)
-            .Select(item => new ServiceRow
+        var services = query.OrderBy(item => item.MaDv)
+            .Select(item => new
             {
                 MaDv = item.MaDv,
                 TenDv = item.TenDv,
                 DonGia = item.DonGia,
-                SoLuong = item.SlconLai == null || item.SlconLai < 0 ? "Không giới hạn" : item.SlconLai.Value.ToString(),
+                item.SlconLai,
                 LoaiDv = item.LoaiDv
             }).ToList();
+
+        return services.Select(item => new ServiceRow
+        {
+            MaDv = item.MaDv,
+            TenDv = item.TenDv,
+            DonGia = item.DonGia,
+            SoLuong = item.SlconLai == null || item.SlconLai < 0 ? "Không giới hạn" : item.SlconLai.Value.ToString(),
+            LoaiDv = item.LoaiDv
+        }).ToList();
     }
 
     private static bool EditService(string? code)
