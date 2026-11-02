@@ -9,6 +9,16 @@ public sealed class FormDanhSachChiTietTienNghi : Form
     private readonly string _roomTypeCode;
     private readonly string _roomTypeName;
     private readonly DataGridView _grid = new();
+    private readonly Label _emptyState = new()
+    {
+        Text = "Loại phòng này chưa có tiện nghi. Bấm “Thêm mới” để thêm.",
+        Dock = DockStyle.Fill,
+        TextAlign = ContentAlignment.MiddleCenter,
+        ForeColor = Color.DimGray,
+        BackColor = Color.DarkGray,
+        Font = new Font("Microsoft Sans Serif", 11F),
+        Visible = false
+    };
 
     public FormDanhSachChiTietTienNghi(string roomTypeCode, string roomTypeName)
     {
@@ -72,16 +82,30 @@ public sealed class FormDanhSachChiTietTienNghi : Form
         root.Controls.Add(roomType, 0, 1);
 
         ConfigureGrid();
-        root.Controls.Add(_grid, 0, 2);
-
-        var actions = new FlowLayoutPanel
+        var gridHost = new Panel
         {
             Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
-            Anchor = AnchorStyles.None,
-            Padding = new Padding(0, 10, 0, 0)
+            BackColor = Color.DarkGray,
+            Margin = Padding.Empty
         };
+        gridHost.Controls.Add(_grid);
+        gridHost.Controls.Add(_emptyState);
+        _emptyState.BringToFront();
+        root.Controls.Add(gridHost, 0, 2);
+
+        var actions = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 4,
+            RowCount = 1,
+            Padding = new Padding(0, 10, 0, 0),
+            Margin = Padding.Empty
+        };
+        actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+        actions.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 143));
+        actions.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 143));
+        actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+        actions.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         var add = new Button
         {
             Text = "Thêm mới",
@@ -101,8 +125,12 @@ public sealed class FormDanhSachChiTietTienNghi : Form
         };
         add.Click += (_, _) => AddAmenity();
         close.Click += (_, _) => Close();
-        actions.Controls.Add(add);
-        actions.Controls.Add(close);
+        add.Dock = DockStyle.Fill;
+        add.Margin = new Padding(3, 0, 3, 0);
+        close.Dock = DockStyle.Fill;
+        close.Margin = new Padding(3, 0, 3, 0);
+        actions.Controls.Add(add, 1, 0);
+        actions.Controls.Add(close, 2, 0);
         root.Controls.Add(actions, 0, 3);
         CancelButton = close;
     }
@@ -184,6 +212,7 @@ public sealed class FormDanhSachChiTietTienNghi : Form
                 if (quantity < 1)
                     _grid.Rows[rowIndex].Cells["GhiChu"].Style.ForeColor = Color.Red;
             }
+            _emptyState.Visible = amenities.Count == 0;
             _grid.ClearSelection();
         }
         catch (Exception ex)
